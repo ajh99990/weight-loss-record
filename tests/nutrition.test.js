@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {GOALS,FOODS,dayKey,nutrients,totals,calories,readSaved,validateEntry,macroStatus} from '../src/nutrition.js';
+import {GOALS,FOODS,dayKey,nutrients,totals,calories,readSaved,validateEntry,macroStatus,createRecordId} from '../src/nutrition.js';
 import {registerNutritionTools} from '../src/webmcp.js';
 import {ringGeometry} from '../src/orbit.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -85,4 +85,14 @@ test('WebMCP tools share read/add/remove actions; invalid inputs do not mutate s
   await assert.rejects(()=>registry.get('remove_food_record').execute({id:'missing'}));assert.equal(log.length,1);
   await registry.get('remove_food_record').execute({id:'test-food'});assert.equal(log.length,0);
   dispose();assert.equal(registry.size,0);
+});
+
+test('HTTP IP origins can add, reload and identify records without randomUUID',()=>{
+  const httpCrypto={getRandomValues:globalThis.crypto.getRandomValues.bind(globalThis.crypto)};
+  const log=Array.from({length:100},()=>({...validateEntry('燕麦片',50),id:createRecordId(httpCrypto)}));
+  assert.equal(new Set(log.map(item=>item.id)).size,100);
+  assert.match(log[0].id,/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+  const restored=readSaved(JSON.stringify({date:dayKey(),log}));
+  assert.equal(restored.issue,null);assert.equal(restored.log[0].id,log[0].id);
+  assert.deepEqual(totals(restored.log),totals(log));
 });

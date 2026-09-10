@@ -59,3 +59,13 @@ export function macroStatus(value,goal) {
   const delta=goal-value;
   return delta>0.05 ? `还差 ${delta.toFixed(1)} g` : delta< -0.05 ? `超出 ${(-delta).toFixed(1)} g` : '目标已达成';
 }
+
+// randomUUID requires HTTPS; getRandomValues also works on an HTTP IP origin.
+export function createRecordId(cryptoApi = globalThis.crypto) {
+  if (typeof cryptoApi.randomUUID === 'function') return cryptoApi.randomUUID();
+  const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}

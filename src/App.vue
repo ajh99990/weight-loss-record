@@ -4,7 +4,7 @@ import {ArrowUpRight,ArrowRight,Plus,Minus,Check,Trash2,Flame,ChevronDown,ScanLi
 import OrbitScene from './OrbitScene.vue';
 import AnimatedNumber from './AnimatedNumber.vue';
 import {registerNutritionTools} from './webmcp';
-import {FOODS,GOALS,MACROS,dayKey,nutrients,totals,calories,readSaved,macroStatus,validateEntry} from './nutrition';
+import {FOODS,GOALS,MACROS,dayKey,nutrients,totals,calories,readSaved,macroStatus,validateEntry,createRecordId} from './nutrition';
 const activeMacro=ref(-1),revision=ref(0),immersive=ref(false),labDialog=ref(null);
 const backgroundScene=ref(null),recordButton=ref(null),injection=ref(null),motionPaused=ref(false);
 function injectEnergy(){const rect=recordButton.value?.getBoundingClientRect();injection.value={id:++revision.value,origin:rect?{x:Math.max(0,Math.min(1,(rect.left+rect.width/2)/window.innerWidth)),y:Math.max(0,Math.min(1,(rect.top+rect.height/2)/window.innerHeight))}:null};}
@@ -27,7 +27,7 @@ function notify(text){message.value=text;clearTimeout(notifyTimer);notifyTimer=s
 function read(){try{const data=readSaved(localStorage.getItem('food-tracker'),date.value);log.value=data.log;saveIssue.value=data.issue||'';if(data.issue){try{localStorage.setItem('food-tracker-backup',localStorage.getItem('food-tracker'))}catch{}}}catch{saveIssue.value='浏览器未允许保存，当前记录仅保留到关闭页面。'}}
 function rollover(){const today=dayKey();if(today!==date.value){date.value=today;log.value=[];read();notify('新的一天，重新记录每一口。')}}
 function persist(){try{localStorage.setItem('food-tracker',JSON.stringify({date:date.value,eaten:eaten.value,log:log.value}));saveIssue.value=''}catch{saveIssue.value='保存失败，请保持此页面打开。'}}
-function recordFood(name,weight){rollover();const item=validateEntry(name,weight);log.value.push({...item,id:crypto.randomUUID(),time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});persist();injectEnergy();error.value='';notify(`已记录 ${FOODS[item.name].label} · ${format(item.grams)} g`);return log.value.at(-1)}
+function recordFood(name,weight){rollover();const item=validateEntry(name,weight);log.value.push({...item,id:createRecordId(),time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});persist();injectEnergy();error.value='';notify(`已记录 ${FOODS[item.name].label} · ${format(item.grams)} g`);return log.value.at(-1)}
 function addFood(){try{recordFood(selected.value,grams.value)}catch(e){error.value=e.message}}
 function removeFood(id){rollover();const i=log.value.findIndex(x=>x.id===id);if(i<0)return;const name=FOODS[log.value[i].name].label;log.value.splice(i,1);persist();notify(`已移除 ${name}`)}
 function changeWeight(delta){grams.value=Math.max(1,Math.min(10000,(Number(grams.value)||0)+delta));error.value=''}
