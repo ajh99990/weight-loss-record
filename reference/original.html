@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>我的减肥营养追踪器</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Vue CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+
+  <body class="bg-gray-100 text-gray-900 bg-slate-700">
+    <div id="app" class="min-w-[700px] max-w-2xl mx-auto p-6">
+      <h1 class="text-2xl font-bold mb-4 text-center text-white">
+        🥗 我的减肥营养追踪器
+      </h1>
+
+      <!-- 输入区域 -->
+      <div class="bg-white rounded-2xl shadow-md p-4 mb-6">
+        <div class="flex flex-col md:flex-row items-center gap-4">
+          <select
+            v-model="selectedFood"
+            class="p-2 rounded-lg border w-full md:w-1/3"
+          >
+            <option disabled value="">选择食物</option>
+            <option v-for="(food, key) in foods" :key="key" :value="key">
+              {{ key }}
+            </option>
+          </select>
+
+          <input
+            type="number"
+            v-model.number="grams"
+            placeholder="克数"
+            class="p-2 rounded-lg border w-full md:w-1/3"
+          />
+
+          <button
+            @click="addFood"
+            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md w-full md:w-1/3"
+          >
+            添加
+          </button>
+        </div>
+      </div>
+
+      <!-- 结果展示 -->
+      <div class="grid gap-4">
+        <div
+          v-for="(goal, key) in goals"
+          :key="key"
+          class="bg-white rounded-2xl shadow-md p-4"
+        >
+          <h2 class="font-semibold capitalize mb-2">
+            {{ names[key] }}: {{ eaten[key].toFixed(1) }} g / {{ goal }} g
+          </h2>
+
+          <div class="w-full bg-gray-200 rounded-full h-4">
+            <div
+              class="bg-blue-500 h-4 rounded-full"
+              :style="{ width: Math.min((eaten[key] / goal) * 100, 100) + '%' }"
+            ></div>
+          </div>
+
+          <p class="text-sm text-gray-500 mt-1">
+            剩余 {{ (goal - eaten[key]).toFixed(1) }} g
+          </p>
+        </div>
+      </div>
+
+      <!-- 已添加食物 -->
+      <div class="mt-6 bg-white rounded-2xl shadow-md p-4">
+        <h2 class="font-semibold mb-2">📋 已吃食物</h2>
+        <ul class="space-y-2 text-gray-700">
+          <li
+            v-for="(item, index) in log"
+            :key="index"
+            class="flex justify-between items-center"
+          >
+            <span>{{ item.name }} - {{ item.grams }} g</span>
+            <button
+              @click="removeFood(index)"
+              class="text-red-500 hover:text-red-700 text-sm"
+            >
+              ❌ 删除
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Vue App Script -->
+    <script>
+      const { reactive, ref, onMounted, watch } = Vue;
+
+      const app = Vue.createApp({
+        setup() {
+          // 营养目标
+          const goals = reactive({
+            protein: 140,
+            fat: 55,
+            carb: 130
+          });
+
+          // 食物数据库
+          const foods = {
+            蛋白粉_原味: { protein: 75, carb: 5.9, fat: 6.3 },
+            蛋白粉_巧克力口味: { protein: 73, carb: 6.5, fat: 6.2 },
+            蛋白粉_牛奶口味: { protein: 74, carb: 6.4, fat: 6.7 },
+            蛋白粉_奶茶口味: { protein: 71, carb: 9.1, fat: 6 },
+            燕麦片: { protein: 12, carb: 55.2, fat: 8.6 },
+            腰果: { protein: 17.3, carb: 37.6, fat: 39.2 },
+            德亚高钙牛奶: { protein: 3.5, carb: 4.9, fat: 1.5 },
+            U形鸡胸奥尔良: { protein: 22.9, carb: 4.8, fat: 1.8 },
+            U形鸡胸香草: { protein: 22.3, carb: 1.6, fat: 2.4 },
+            开心果冰淇淋: { protein: 6.7, carb: 21.1, fat: 13.8 },
+            欧包: { protein: 6, carb: 33.3, fat: 5.6 },
+            南瓜泥: { protein: 5.3, carb: 22.8, fat: 13.8 },
+            面条: { protein: 60, carb: 60, fat: 30 },
+            舒芙蕾: { protein: 5.8, carb: 19.9, fat: 13 },
+            荔枝大福: { protein: 3.5, carb:36.8, fat:12.7 },
+            悦鲜活牛奶: { protein: 3.6, carb:3, fat:3.9 }
+          };
+
+          const eaten = reactive({
+            protein: 0,
+            fat: 0,
+            carb: 0
+          });
+
+          const log = ref([]);
+          const selectedFood = ref("");
+          const grams = ref("");
+
+          const names = {
+            protein: "蛋白质",
+            carb: "碳水",
+            fat: "脂肪"
+          };
+
+          function todayStr() {
+            return new Date().toISOString().split("T")[0];
+          }
+
+          function saveData() {
+            const data = {
+              date: todayStr(),
+              eaten,
+              log: log.value
+            };
+            localStorage.setItem("food-tracker", JSON.stringify(data));
+          }
+
+          function loadData() {
+            const data = localStorage.getItem("food-tracker");
+            if (!data) return;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.date === todayStr()) {
+                Object.assign(eaten, parsed.eaten);
+                log.value = parsed.log || [];
+              } else {
+                localStorage.removeItem("food-tracker");
+              }
+            } catch (e) {
+              console.error("数据加载失败:", e);
+            }
+          }
+
+          function addFood() {
+            if (!selectedFood.value || !grams.value) return;
+
+            const food = foods[selectedFood.value];
+            eaten.protein += (food.protein * grams.value) / 100;
+            eaten.carb += (food.carb * grams.value) / 100;
+            eaten.fat += (food.fat * grams.value) / 100;
+
+            log.value.push({
+              name: selectedFood.value,
+              grams: grams.value
+            });
+
+            grams.value = "";
+            saveData();
+          }
+
+          function removeFood(index) {
+            const item = log.value[index];
+            if (!item) return;
+
+            const food = foods[item.name];
+            eaten.protein -= (food.protein * item.grams) / 100;
+            eaten.carb -= (food.carb * item.grams) / 100;
+            eaten.fat -= (food.fat * item.grams) / 100;
+
+            eaten.protein = Math.max(eaten.protein, 0);
+            eaten.carb = Math.max(eaten.carb, 0);
+            eaten.fat = Math.max(eaten.fat, 0);
+
+            log.value.splice(index, 1);
+            saveData();
+          }
+
+          onMounted(() => {
+            loadData();
+          });
+
+          watch([eaten, log], saveData, { deep: true });
+
+          return {
+            goals,
+            foods,
+            eaten,
+            log,
+            selectedFood,
+            grams,
+            names,
+            addFood,
+            removeFood
+          };
+        }
+      });
+
+      app.mount("#app");
+    </script>
+  </body>
+</html>
