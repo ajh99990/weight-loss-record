@@ -1,8 +1,8 @@
 export const GOALS = Object.freeze({ protein: 140, carb: 130, fat: 55 });
 export const MACROS = [
-  {key:'protein',name:'蛋白质',en:'PROTEIN',color:'#cefc68',goal:140},
-  {key:'carb',name:'碳水化合物',en:'CARBS',color:'#88bdff',goal:130},
-  {key:'fat',name:'脂肪',en:'FAT',color:'#ff9b76',goal:55},
+  {key:'protein',name:'蛋白质',en:'PROTEIN',color:'#cefc68',goal:GOALS.protein},
+  {key:'carb',name:'碳水化合物',en:'CARBS',color:'#88bdff',goal:GOALS.carb},
+  {key:'fat',name:'脂肪',en:'FAT',color:'#ff9b76',goal:GOALS.fat},
 ];
 // Per-100g values preserved verbatim from the user's original tracker.
 export const FOODS = {
