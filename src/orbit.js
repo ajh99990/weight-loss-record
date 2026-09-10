@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sampleInjection, impactEnvelope } from './injection.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -33,11 +34,11 @@ export function ringGeometry(radius,tube,segments=240,sides=16){
   g.setIndex(indices);g.computeBoundingSphere();
   return g;
 }
-export function createOrbit(host,{reduced=false,immersive=false,onSelect=()=>{},onFailure=()=>{},onModelFailure=()=>{}}={}){
-  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
+export function createOrbit(host,{reduced=false,immersive=false,background=false,onSelect=()=>{},onFailure=()=>{},onModelFailure=()=>{}}={}){
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=1.15;
+  renderer.toneMappingExposure=.88;
   renderer.setClearColor(0x000000,0);
   const canvas=renderer.domElement;canvas.setAttribute('aria-hidden','true');canvas.className='orbit-canvas';host.appendChild(canvas);
   const scene=new THREE.Scene();
@@ -45,12 +46,12 @@ export function createOrbit(host,{reduced=false,immersive=false,onSelect=()=>{},
   const controls=immersive?new OrbitControls(camera,canvas):null;
   if(controls){controls.enableDamping=true;controls.dampingFactor=.06;controls.enablePan=false;controls.minDistance=5.8;controls.maxDistance=13;controls.autoRotate=true;controls.autoRotateSpeed=.6;controls.rotateSpeed=.45;controls.zoomSpeed=.6;}
   const pmrem=new THREE.PMREMGenerator(renderer),room=new RoomEnvironment();
-  const env=pmrem.fromScene(room,.04);scene.environment=env.texture;scene.environmentIntensity=1.1;room.dispose();pmrem.dispose();
-  scene.add(new THREE.AmbientLight('#bcd6b0',1.5));
-  const key=new THREE.DirectionalLight('#f4ffd9',5);key.position.set(-3,4,5);scene.add(key);
-  const rim=new THREE.DirectionalLight('#c4ffc0',3);rim.position.set(4,-2,2);scene.add(rim);
+  const env=pmrem.fromScene(room,.04);scene.environment=env.texture;scene.environmentIntensity=.8;room.dispose();pmrem.dispose();
+  scene.add(new THREE.AmbientLight('#bcd6b0',.7));
+  const key=new THREE.DirectionalLight('#f4ffd9',3);key.position.set(-3,4,5);scene.add(key);
+  const rim=new THREE.DirectionalLight('#c4ffc0',2);rim.position.set(4,-2,2);scene.add(rim);
   const blue=new THREE.PointLight('#9dc8ff',15,10);blue.position.set(-2,-1,2);scene.add(blue);
-  const sculpture=new THREE.Group();scene.add(sculpture);sculpture.position.x=immersive?0:.9;
+  const sculpture=new THREE.Group();scene.add(sculpture);sculpture.position.x=immersive?0:.25;
   const rings=SPECS.map((spec,index)=>{
     const group=new THREE.Group();group.rotation.set(spec.x,spec.y,spec.z);sculpture.add(group);
     const geometry=ringGeometry(spec.r,spec.tube);
@@ -69,86 +70,123 @@ export function createOrbit(host,{reduced=false,immersive=false,onSelect=()=>{},
   });
   const particlePositions=[],particleColors=[];
   let seed=17;const random=()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646};
-  for(let i=0;i<100;i++){
-    const a=random()*TAU,r=2.5+random()*1.7;
+  for(let i=0;i<480;i++){
+    const a=random()*TAU,r=2.5+random()*6;
     particlePositions.push(Math.cos(a)*r,Math.sin(a)*r*.70,(random()-.5)*3);
     const c=new THREE.Color(i%3===0?'#cefc68':i%3===1?'#88bdff':'#ff9b76');particleColors.push(c.r,c.g,c.b);
   }
   const particleGeo=new THREE.BufferGeometry();particleGeo.setAttribute('position',new THREE.Float32BufferAttribute(particlePositions,3));particleGeo.setAttribute('color',new THREE.Float32BufferAttribute(particleColors,3));
-  const particleMat=new THREE.PointsMaterial({size:.016,vertexColors:true,transparent:true,opacity:.5,depthWrite:false});
+  const particleMat=new THREE.PointsMaterial({size:.021,vertexColors:true,transparent:true,opacity:.5,depthWrite:false});
   const particles=new THREE.Points(particleGeo,particleMat);sculpture.add(particles);
   const reactor=new THREE.Group();sculpture.add(reactor);
   reactor.rotation.set(.25,.2,-.1);
   // Blender-authored crystal, mechanical ribs, gimbal rings and fasteners.
   new GLTFLoader().load('/models/fuel-core.glb',gltf=>{
     if(destroyed){gltf.scene.traverse(o=>{o.geometry?.dispose();o.material?.dispose()});return}
-    gltf.scene.traverse(o=>{if(o.isMesh){o.userData.basePosition=o.position.clone();o.userData.baseScale=o.scale.clone();o.material.envMapIntensity=.85;if(o.material.name==='Fuel luminescence'){o.material.emissiveIntensity=1.4;o.userData.isEnergy=true;}if(o.material.name==='Optical shell'){o.material.transmission=.72;o.material.thickness=.18;o.material.roughness=.12;}}});
+    gltf.scene.traverse(o=>{if(o.isMesh){o.userData.basePosition=o.position.clone();o.userData.baseScale=o.scale.clone();o.material.envMapIntensity=.85;if(o.material.name==='Fuel luminescence'){o.material.emissiveIntensity=.8;o.userData.isEnergy=true;}if(o.material.name==='Optical shell'){o.material.transmission=.72;o.material.thickness=.18;o.material.roughness=.12;}}});
     reactor.add(gltf.scene);
   },undefined,onModelFailure);
   const fragments=new THREE.Group();sculpture.add(fragments);
   const shardGeo=new THREE.OctahedronGeometry(.08,0);
   const shards=[];
-  for(let i=0;i<18;i++){
+  for(let i=0;i<42;i++){
     const color=SPECS[i%3].color,mat=new THREE.MeshPhysicalMaterial({color,metalness:.75,roughness:.18,emissive:color,emissiveIntensity:.08,transparent:true,opacity:.6});
-    const shard=new THREE.Mesh(shardGeo,mat),angle=i/18*TAU,radius=2.5+(i%3)*.20;
+    const shard=new THREE.Mesh(shardGeo,mat),angle=i/42*TAU,radius=2.6+(i%6)*.34;
     shard.scale.set(.45,.6+(i%4)*.35,.7);fragments.add(shard);shards.push({shard,angle,radius,phase:i*1.8});
   }
-  const flowGeo=new THREE.BufferGeometry(),flowPos=new Float32Array(180*3),flowColors=new Float32Array(180*3);
-  const flowMeta=[];for(let i=0;i<180;i++){const a=random()*TAU,r=3+random()*2,z=(random()-.5)*3;flowMeta.push([a,r,z]);const c=new THREE.Color(SPECS[i%3].color);flowColors.set([c.r,c.g,c.b],i*3)}
-  flowGeo.setAttribute('position',new THREE.BufferAttribute(flowPos,3));flowGeo.setAttribute('color',new THREE.BufferAttribute(flowColors,3));
-  const flowMat=new THREE.PointsMaterial({size:.033,vertexColors:true,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
-  const flow=new THREE.Points(flowGeo,flowMat);sculpture.add(flow);
-  const shock=new THREE.Mesh(new THREE.RingGeometry(1,1.013,120),new THREE.MeshBasicMaterial({color:'#cefc68',transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));sculpture.add(shock);
+  const count=window.innerWidth<700?1400:2800,streakCount=Math.floor(count/3);
+  const flowGeo=new THREE.BufferGeometry(),flowPos=new Float32Array(count*3),flowColors=new Float32Array(count*3),flowAlpha=new Float32Array(count),flowSizes=new Float32Array(count);
+  const flowMeta=[];
+  for(let i=0;i<count;i++){
+    flowMeta.push({angle:random()*TAU,radius:5+random()*6,z:(random()-.5)*5,spread:.3+random()*2,delay:random()*.65,duration:1.15+random()*.8,fromButton:i%5<3});
+    const c=new THREE.Color(i%7===0?'#ffffff':SPECS[i%3].color);flowColors.set([c.r,c.g,c.b],i*3);flowSizes[i]=2+random()*5;
+  }
+  flowGeo.setAttribute('position',new THREE.BufferAttribute(flowPos,3).setUsage(THREE.DynamicDrawUsage));
+  flowGeo.setAttribute('color',new THREE.BufferAttribute(flowColors,3));flowGeo.setAttribute('aAlpha',new THREE.BufferAttribute(flowAlpha,1).setUsage(THREE.DynamicDrawUsage));flowGeo.setAttribute('aSize',new THREE.BufferAttribute(flowSizes,1));
+  const flowMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,vertexColors:true,
+    uniforms:{pixelRatio:{value:renderer.getPixelRatio()}},
+    vertexShader:`attribute float aAlpha; attribute float aSize; uniform float pixelRatio; varying vec3 vColor; varying float vAlpha;
+      void main(){vColor=color;vAlpha=aAlpha;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*pixelRatio*8./max(1.,-mv.z),1.,24.);}`,
+    fragmentShader:`varying vec3 vColor; varying float vAlpha;
+      void main(){float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;float glow=pow(1.-r,1.5);gl_FragColor=vec4(vColor*(1.3+glow),glow*vAlpha);}`});
+  const flow=new THREE.Points(flowGeo,flowMat);flow.frustumCulled=false;flow.visible=false;sculpture.add(flow);
+  const streakPos=new Float32Array(streakCount*6),streakColors=new Float32Array(streakCount*6),streakGeo=new THREE.BufferGeometry();
+  streakGeo.setAttribute('position',new THREE.BufferAttribute(streakPos,3).setUsage(THREE.DynamicDrawUsage));streakGeo.setAttribute('color',new THREE.BufferAttribute(streakColors,3).setUsage(THREE.DynamicDrawUsage));
+  const streaks=new THREE.LineSegments(streakGeo,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false}));streaks.frustumCulled=false;streaks.visible=false;sculpture.add(streaks);
+  const source=new THREE.Vector3(4,-2,0),head=new Float32Array(4),tail=new Float32Array(4);
+  const shocks=SPECS.map((spec,i)=>{
+    const mesh=new THREE.Mesh(new THREE.RingGeometry(1,1.025+i*.006,160),new THREE.MeshBasicMaterial({color:spec.color,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    mesh.rotation.set(i*.2,-i*.14,0);sculpture.add(mesh);return mesh;
+  });
   const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
-  const bloom=new UnrealBloomPass(new THREE.Vector2(512,400),.42,.5,.9);composer.addPass(bloom);composer.addPass(new OutputPass());
+  const bloom=new UnrealBloomPass(new THREE.Vector2(512,400),.3,.65,1.05);composer.addPass(bloom);composer.addPass(new OutputPass());
   const mouse=new THREE.Vector2(),pointer=new THREE.Vector2(),raycaster=new THREE.Raycaster();
   let active=-1,paused=reduced,visible=true,destroyed=false,frame,last=0,time=0,burst=0,pulseAge=5,suspended=false,assembly=0,assemblyTarget=0;
-  const resize=()=>{const width=host.clientWidth,height=host.clientHeight;if(!width||!height)return;renderer.setSize(width,height);composer.setSize(width,height);camera.aspect=width/height;if(!immersive){camera.position.z=width<400?10.1:8.2;sculpture.position.x=width<400?.62:.9;}else if(width<600)camera.position.z=10.8;camera.updateProjectionMatrix()};
+  const resize=()=>{
+    const width=host.clientWidth,height=host.clientHeight;if(!width||!height)return;
+    renderer.setSize(width,height);composer.setSize(width,height);camera.aspect=width/height;
+    if(background){camera.position.z=width<700?7.4:6.35;sculpture.position.set(width<700?.15:-.08,.04,0);}
+    else if(!immersive){camera.position.z=width<400?10.1:8.2;sculpture.position.x=width<400?.62:.9;}
+    else if(width<600)camera.position.z=10.8;
+    camera.updateProjectionMatrix();camera.updateMatrixWorld();
+  };
   const ro=new ResizeObserver(resize);ro.observe(host);resize();
   const move=e=>{const rect=host.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height*2-1));raycaster.setFromCamera(mouse,camera);const hit=raycaster.intersectObjects(rings.map(r=>r.track))[0];canvas.style.cursor=hit?'pointer':'grab';pointer.copy(mouse)};
   const leave=()=>{pointer.set(0,0);canvas.style.cursor='grab'};
   const click=()=>{raycaster.setFromCamera(mouse,camera);const hit=raycaster.intersectObjects(rings.map(r=>r.track))[0];if(hit)onSelect(hit.object.userData.index)};
-  host.addEventListener('pointermove',move);host.addEventListener('pointerleave',leave);host.addEventListener('click',click);
+  const pointerSurface=background?window:host;pointerSurface.addEventListener('pointermove',move);pointerSurface.addEventListener('pointerleave',leave);if(!background)host.addEventListener('click',click);
   const lost=e=>{e.preventDefault();onFailure();};canvas.addEventListener('webglcontextlost',lost);
   const observer=new IntersectionObserver(entries=>{visible=entries[0]?.isIntersecting??true});observer.observe(host);
   function animate(ms){
     if(destroyed)return;frame=requestAnimationFrame(animate);const dt=Math.min((ms-last)/1000||0,.05);last=ms;
     if(!visible||document.hidden||suspended)return;
     if(!paused)time+=dt;
-    burst*=Math.exp(-dt*2.4);if(!paused)pulseAge+=dt;
+    if(!paused)pulseAge+=dt;burst=paused?0:impactEnvelope(pulseAge);bloom.strength=.3+burst*1.0;
     const lerp=1-Math.exp(-dt*5);
     sculpture.rotation.y+=( (paused||immersive?0:pointer.x*.18)-sculpture.rotation.y)*lerp;
     sculpture.rotation.x+=( (paused||immersive?0:-pointer.y*.10)-sculpture.rotation.x)*lerp;
-    sculpture.scale.setScalar(1+burst*.025);
+    sculpture.scale.setScalar(1+burst*.045);
     rings.forEach((ring,i)=>{
       ring.value=paused?ring.target:THREE.MathUtils.lerp(ring.value,ring.target,1-Math.exp(-dt*4));
       const progress=Math.min(1,Math.max(0,ring.value));
       ring.fill.geometry.setDrawRange(0,Math.floor(progress*240)*16*6);
       const angle=Math.PI/2-progress*TAU;ring.bead.position.set(Math.cos(angle)*ring.spec.r,Math.sin(angle)*ring.spec.r,0);
       ring.bead.visible=progress>.001;
-      ring.group.rotation.x=ring.spec.x+(paused?0:Math.sin(time*.38+i*1.8)*(immersive?.25:.12));
-      ring.group.rotation.y=ring.spec.y+(paused?0:Math.cos(time*.29+i*2.1)*(immersive?.35:.20));
+      ring.group.rotation.x=ring.spec.x+(paused?0:Math.sin(time*.38+i*1.8)*(background?.48:immersive?.25:.12));
+      ring.group.rotation.y=ring.spec.y+(paused?0:Math.cos(time*.29+i*2.1)*(background?.62:immersive?.35:.20));
       ring.tracer.rotation.z=paused?i*2.1:-time*(.22+i*.06)+i*2.1;
       ring.track.material.opacity+=( (active===i?.58:active>=0?.14:.30)-ring.track.material.opacity)*lerp;
       ring.fill.material.emissiveIntensity+=( (active===i?1.1:.45+burst*.7)-ring.fill.material.emissiveIntensity)*lerp;
     });
     reactor.rotation.y=time*.18;reactor.rotation.z=Math.sin(time*.3)*.10-.13;
     reactor.position.y=paused?0:Math.sin(time*.85)*.065;
-    reactor.scale.setScalar(1+burst*.11);
+    reactor.scale.setScalar((background?1.45:1.15)*(1+burst*.16));
     assembly+=(assemblyTarget-assembly)*(paused?1:lerp);
     reactor.traverse(o=>{
-      if(o.userData.isEnergy)o.material.emissiveIntensity=1.2+burst*2;
+      if(o.userData.isEnergy)o.material.emissiveIntensity=.8+burst*5;
       const base=o.userData.basePosition;if(!base)return;
       if(o.name.startsWith('RIB')||o.name.startsWith('FASTENER'))o.position.copy(base).multiplyScalar(1+assembly*.7);
       if(o.name.startsWith('GIMBAL'))o.scale.copy(o.userData.baseScale).multiplyScalar(1+assembly*.32);
       if(o.name.startsWith('SHELL'))o.position.y=base.y+assembly*1.1;
       if(o.name.startsWith('COLLAR')){o.position.copy(base).multiplyScalar(1+assembly*.9);}
     });
-    for(const {shard,angle,radius,phase} of shards){const a=angle+time*.035;shard.position.set(Math.cos(a)*radius,Math.sin(a)*radius*.82,Math.sin(phase+time*.2)*.65);shard.rotation.set(time*.3+phase,time*.14,angle);}
-    const flight=Math.min(1,pulseAge/1.4);
-    flowMat.opacity=pulseAge<1.4?Math.sin(flight*Math.PI)*.9:0;
-    if(flowMat.opacity>0){for(let i=0;i<flowMeta.length;i++){const [a,r,z]=flowMeta[i],p=Math.max(0,1-flight);flowPos[i*3]=Math.cos(a+flight*2)*r*p;flowPos[i*3+1]=Math.sin(a+flight*2)*r*p;flowPos[i*3+2]=z*p}flowGeo.attributes.position.needsUpdate=true;}
-    shock.scale.setScalar(1+pulseAge*1.8);shock.material.opacity=pulseAge<1.3?Math.max(0,.35-pulseAge*.28):0;
+    for(const {shard,angle,radius,phase} of shards){const a=angle+time*.035;shard.position.set(Math.cos(a)*radius*(1+burst*.2),Math.sin(a)*radius*.82*(1+burst*.2),Math.sin(phase+time*.2)*.65);shard.rotation.set(time*.3+phase,time*.14,angle);}
+    flow.visible=streaks.visible=!paused&&pulseAge<2.7;
+    if(flow.visible){
+      for(let i=0;i<count;i++){
+        sampleInjection(flowMeta[i],pulseAge,source,head);
+        flowPos[i*3]=head[0];flowPos[i*3+1]=head[1];flowPos[i*3+2]=head[2];flowAlpha[i]=head[3];
+        if(i<streakCount){
+          sampleInjection(flowMeta[i],pulseAge-.055,source,tail);
+          if(tail[3]===0)tail.set(head);
+          const offset=i*6;
+          for(let j=0;j<3;j++){streakPos[offset+j]=head[j];streakPos[offset+3+j]=tail[j];streakColors[offset+j]=flowColors[i*3+j]*head[3]*1.7;streakColors[offset+3+j]=flowColors[i*3+j]*head[3]*.07;}
+        }
+      }
+      flowGeo.attributes.position.needsUpdate=true;flowGeo.attributes.aAlpha.needsUpdate=true;
+      streakGeo.attributes.position.needsUpdate=true;streakGeo.attributes.color.needsUpdate=true;
+    }
+    shocks.forEach((shock,i)=>{const age=pulseAge-1.22-i*.21;shock.visible=!paused&&age>0&&age<1.5;shock.scale.setScalar(1+Math.max(0,age)*6);shock.material.opacity=shock.visible?Math.pow(1-age/1.5,2)*.85:0;});
     if(controls){controls.autoRotate=!paused;controls.update();}
     particles.rotation.z=paused?0:Math.sin(time*.05)*.1;
     particleMat.opacity=.3+burst*.5;
@@ -157,13 +195,18 @@ export function createOrbit(host,{reduced=false,immersive=false,onSelect=()=>{},
   frame=requestAnimationFrame(animate);
   return {
     setProgress(values){rings.forEach((r,i)=>r.target=Math.max(0,Number(values[i])||0));},
-    pulse(){if(!paused){burst=1;pulseAge=0}},
+    pulse(origin){if(!paused){
+      camera.updateMatrixWorld();sculpture.updateWorldMatrix(true,false);
+      if(origin){const world=new THREE.Vector3(origin.x*2-1,1-origin.y*2,.5).unproject(camera);const direction=world.sub(camera.position).normalize();world.copy(camera.position).addScaledVector(direction,-camera.position.z/direction.z);source.copy(sculpture.worldToLocal(world));}
+      else source.set(4,-2,0);
+      pulseAge=0;
+    }},
     setActive(index){active=index},
     setPaused(value){paused=value},
     setSuspended(value){suspended=value},
     setExploded(value){assemblyTarget=value?1:0},
     zoom(amount){if(controls){camera.position.multiplyScalar(amount);camera.position.clampLength(controls.minDistance,controls.maxDistance);controls.update()}},
     reset(){pointer.set(0,0);sculpture.rotation.set(0,0,0);active=-1;if(controls){camera.position.set(0,0,host.clientWidth<600?10.8:8.2);controls.target.set(0,0,0);controls.update()}},
-    dispose(){destroyed=true;cancelAnimationFrame(frame);ro.disconnect();observer.disconnect();host.removeEventListener('pointermove',move);host.removeEventListener('pointerleave',leave);host.removeEventListener('click',click);canvas.removeEventListener('webglcontextlost',lost);scene.traverse(o=>{o.geometry?.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())});controls?.dispose();env.dispose();composer.dispose();renderer.dispose();canvas.remove()}
+    dispose(){destroyed=true;cancelAnimationFrame(frame);ro.disconnect();observer.disconnect();pointerSurface.removeEventListener('pointermove',move);pointerSurface.removeEventListener('pointerleave',leave);host.removeEventListener('click',click);canvas.removeEventListener('webglcontextlost',lost);scene.traverse(o=>{o.geometry?.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())});controls?.dispose();env.dispose();composer.dispose();renderer.dispose();canvas.remove()}
   };
 }

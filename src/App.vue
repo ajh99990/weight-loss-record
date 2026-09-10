@@ -6,6 +6,8 @@ import AnimatedNumber from './AnimatedNumber.vue';
 import {registerNutritionTools} from './webmcp';
 import {FOODS,GOALS,MACROS,dayKey,nutrients,totals,calories,readSaved,macroStatus,validateEntry} from './nutrition';
 const activeMacro=ref(-1),revision=ref(0),immersive=ref(false),labDialog=ref(null);
+const backgroundScene=ref(null),recordButton=ref(null),injection=ref(null),motionPaused=ref(false);
+function injectEnergy(){const rect=recordButton.value?.getBoundingClientRect();injection.value={id:++revision.value,origin:rect?{x:Math.max(0,Math.min(1,(rect.left+rect.width/2)/window.innerWidth)),y:Math.max(0,Math.min(1,(rect.top+rect.height/2)/window.innerHeight))}:null};}
 let labOpener,previousOverflow;
 async function openLab(){labOpener=document.activeElement;previousOverflow=document.body.style.overflow;immersive.value=true;await nextTick();document.body.style.overflow='hidden';labDialog.value.showModal()}
 function closeLab(){immersive.value=false;document.body.style.overflow=previousOverflow??'';activeMacro.value=-1;labOpener?.focus()}
@@ -25,9 +27,9 @@ function notify(text){message.value=text;clearTimeout(notifyTimer);notifyTimer=s
 function read(){try{const data=readSaved(localStorage.getItem('food-tracker'),date.value);log.value=data.log;saveIssue.value=data.issue||'';if(data.issue){try{localStorage.setItem('food-tracker-backup',localStorage.getItem('food-tracker'))}catch{}}}catch{saveIssue.value='浏览器未允许保存，当前记录仅保留到关闭页面。'}}
 function rollover(){const today=dayKey();if(today!==date.value){date.value=today;log.value=[];read();notify('新的一天，重新记录每一口。')}}
 function persist(){try{localStorage.setItem('food-tracker',JSON.stringify({date:date.value,eaten:eaten.value,log:log.value}));saveIssue.value=''}catch{saveIssue.value='保存失败，请保持此页面打开。'}}
-function recordFood(name,weight){rollover();const item=validateEntry(name,weight);log.value.push({...item,id:crypto.randomUUID(),time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});persist();revision.value++;error.value='';notify(`已记录 ${FOODS[item.name].label} · ${format(item.grams)} g`);return log.value.at(-1)}
+function recordFood(name,weight){rollover();const item=validateEntry(name,weight);log.value.push({...item,id:crypto.randomUUID(),time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});persist();injectEnergy();error.value='';notify(`已记录 ${FOODS[item.name].label} · ${format(item.grams)} g`);return log.value.at(-1)}
 function addFood(){try{recordFood(selected.value,grams.value)}catch(e){error.value=e.message}}
-function removeFood(id){rollover();const i=log.value.findIndex(x=>x.id===id);if(i<0)return;const name=FOODS[log.value[i].name].label;log.value.splice(i,1);persist();revision.value++;notify(`已移除 ${name}`)}
+function removeFood(id){rollover();const i=log.value.findIndex(x=>x.id===id);if(i<0)return;const name=FOODS[log.value[i].name].label;log.value.splice(i,1);persist();notify(`已移除 ${name}`)}
 function changeWeight(delta){grams.value=Math.max(1,Math.min(10000,(Number(grams.value)||0)+delta));error.value=''}
 function onStorage(e){if(e.key==='food-tracker'){date.value=dayKey();read()}}
 onMounted(()=>{read();unregisterTools=registerNutritionTools({read:()=>({date:date.value,goals:GOALS,totals:eaten.value,log:log.value,foods:FOODS}),add:recordFood,remove:removeFood,afterUpdate:nextTick});window.addEventListener('storage',onStorage);midnightTimer=setInterval(rollover,30000);window.addEventListener('focus',rollover)});
@@ -36,6 +38,9 @@ onBeforeUnmount(()=>{if(immersive.value)document.body.style.overflow=previousOve
 
 <template>
   <div class="app-shell">
+    <div class="world-background" aria-hidden="true"><OrbitScene ref="backgroundScene" background :progress="MACROS.map(m=>eaten[m.key]/m.goal)" :active="activeMacro" :injection="injection" :suspended="immersive" @motion="motionPaused=$event"/></div>
+    <div class="world-shade" aria-hidden="true"></div>
+    <div v-if="injection && !motionPaused && !immersive" :key="injection.id" class="injection-flare" aria-hidden="true"></div>
     <header class="topbar">
       <a class="brand" href="#main" aria-label="FUEL 每日营养"><span class="brand-symbol"><Zap :size="24" fill="currentColor"/></span><span>FUEL<span class="brand-period">.</span></span><span class="brand-divider"></span><span class="brand-caption">每日营养</span></a>
       <div class="header-right"><span class="local-indicator"><i></i> {{saveIssue?'尚未保存':'仅在本机保存'}}</span><span class="day-chip">{{dateLabel}}</span></div>
@@ -47,11 +52,11 @@ onBeforeUnmount(()=>{if(immersive.value)document.body.style.overflow=previousOve
           <div class="orbit-panel">
             <div class="panel-top"><span class="micro-title">01 / NUTRIENT REACTOR</span><span class="status-pill"><i></i>{{ finished===3?'三项目标已达成':log.length?'能量持续注入中':'等待第一口能量'}}</span></div>
             <div class="orbit-space">
-              <OrbitScene :progress="MACROS.map(m=>eaten[m.key]/m.goal)" :active="activeMacro" :revision="revision" :suspended="immersive" @select="activeMacro=$event" @expand="openLab"/>
+              <div class="field-caption" aria-hidden="true"><span>PERSONAL ENERGY SYSTEM</span><strong>每一口，<br/>都成为能量。</strong></div>
               <div class="energy-center"><span class="energy-caption"><Flame :size="15"/> 今日摄入</span><div class="energy-number"><AnimatedNumber :value="energy" :decimals="0"/></div><span class="energy-unit">KCAL</span><div class="energy-baseline">目标约 {{targetEnergy.toLocaleString('en-US')}} kcal</div></div>
-              <span class="reactor-label"><span>FUEL CORE</span><span>营养反应堆 <ArrowUpRight :size="12"/></span></span><span class="orbit-coordinate coordinate-left">P / C / F</span><span class="orbit-coordinate coordinate-right">DAILY INTAKE</span>
+              <span class="reactor-label"><span>FUEL CORE / 02</span><span>营养反应堆 <ArrowUpRight :size="12"/></span></span><span class="orbit-coordinate coordinate-left">P / C / F</span><span class="orbit-coordinate coordinate-right">DAILY INTAKE</span>
             </div>
-            <div class="orbit-bottom"><span><i></i> 轨道填充 = 目标完成度</span><span class="energy-footnote">能量按三大营养素估算</span></div>
+            <div class="orbit-bottom"><span><i></i> 轨道填充 = 目标完成度</span><div class="field-controls"><button @click="backgroundScene?.toggleMotion()" :aria-label="motionPaused?'播放背景动画':'暂停背景动画'"><Play v-if="motionPaused" :size="15"/><Pause v-else :size="15"/></button><button @click="openLab"><Expand :size="15"/> 探索核心</button></div></div>
           </div>
           <div class="macro-grid">
             <article v-for="(macro,i) in MACROS" :key="macro.key" class="macro-card" :class="{highlighted:activeMacro===i}" tabindex="0" @mouseenter="activeMacro=i" @mouseleave="activeMacro=-1" @focus="activeMacro=i" @blur="activeMacro=-1" :style="{'--macro':macro.color}">
@@ -73,7 +78,7 @@ onBeforeUnmount(()=>{if(immersive.value)document.body.style.overflow=previousOve
             <div class="portion-presets"><button v-for="n in [30,50,100,200]" type="button" :class="{active:Number(grams)===n}" @click="grams=n;error=''">{{n}} g</button></div>
             <div class="portion-preview"><div class="preview-heading"><span>这一份营养</span><span>≈ {{Math.round(calories(preview))}} kcal</span></div><div class="preview-macros"><div v-for="macro in MACROS" :key="macro.key" :style="{'--macro':macro.color}"><span><i></i>{{macro.name==='碳水化合物'?'碳水':macro.name}}</span><strong>{{format(preview[macro.key])}}<small> g</small></strong></div></div></div>
             <p v-if="error" id="weight-error" class="form-error" role="alert">{{error}}</p>
-            <button class="add-button" type="submit"><Plus :size="20"/><span>记入今日</span><ArrowUpRight :size="22"/></button>
+            <button ref="recordButton" class="add-button" type="submit"><Plus :size="20"/><span>记入今日 · 注入能量</span><ArrowUpRight :size="22"/></button>
           </form>
           <p class="entry-note"><Check :size="13"/> 记录后自动保存，随时可以删除</p>
         </aside>

@@ -22,3 +22,70 @@
 @media(max-width:1150px) and (min-width:901px){.energy-center{left:22px;top:114px}.energy-number{font-size:68px}.energy-caption{font-size:12px}.reactor-label{right:22px;top:63px}.reactor-label>span:first-child{font-size:14px}.reactor-label>span:last-child{display:none}.orbit-controls{right:18px}.orbit-bottom{left:20px;right:210px;font-size:11px;max-width:115px;line-height:1.7}.energy-baseline{font-size:11px!important}.lab-decoration{font-size:35px}}
 @media(max-width:600px){.energy-center{left:19px;top:93px}.energy-number{font-size:53px;line-height:1.1;margin-top:10px}.energy-caption{font-size:12px;gap:4px}.energy-caption svg{width:12px}.energy-unit{font-size:10px!important;letter-spacing:2px}.energy-baseline{font-size:10px!important;margin-top:13px;padding-top:9px;max-width:112px}.reactor-label{right:18px;top:51px}.reactor-label>span:first-child{font-size:13px;letter-spacing:2px}.reactor-label>span:last-child{font-size:10px;gap:3px}.orbit-controls{bottom:3px;right:15px}.orbit-controls .expand-orbit{font-size:11px;padding:0 8px}.orbit-bottom{font-size:10px;left:18px;right:210px;bottom:20px;line-height:1.5}.orbit-bottom i{display:none}.energy-lab{width:100vw;height:100dvh;border-radius:0;border:0}.lab-top{inset:23px 20px auto;gap:10px}.lab-top .eyebrow{font-size:9px!important;letter-spacing:1.7px}.lab-top h2{font-size:20px;margin-top:10px}.lab-close{padding:9px;gap:6px;font-size:12px}.lab-close>svg{width:16px}.lab-readout{left:22px;top:122px;gap:6px}.lab-readout strong{font-size:43px}.lab-readout>span:first-child{font-size:12px}.lab-readout>span:last-child{font-size:11px}.lab-decoration{right:20px;top:139px;font-size:25px;letter-spacing:2px}.lab-decoration span{font-size:7px;max-width:125px;line-height:1.8}.lab-macros{bottom:25px;width:calc(100% - 32px);gap:8px}.lab-macros button{padding:13px 10px;border-radius:11px;gap:10px}.lab-macros strong{font-size:27px}.lab-macros strong small{font-size:10px}.lab-macros button>span:first-child{font-size:12px}.lab-macros button>span:last-child{font-size:11px}.lab-scene .orbit-controls{bottom:177px;gap:5px;padding:7px;width:max-content;max-width:calc(100vw - 24px)}.lab-scene .orbit-controls button{width:30px;height:33px}.lab-scene .orbit-controls .lab-action{font-size:11px;padding:0 7px;gap:4px}.lab-scene .orbit-controls .lab-action>svg{width:12px}.lab-scene .orbit-controls .orbit-drag-hint{font-size:11px;bottom:58px}.lab-scene .orbit-controls>button:first-of-type{display:none}.lab-scene .three-stage{inset:80px 0 130px}.lab-scene .orbit-fallback{width:320px;height:320px;top:46%}}
 @media(max-height:650px) and (min-width:650px){.lab-top{inset:20px 25px auto}.lab-macros{bottom:18px;max-width:580px}.lab-macros button{padding:10px 15px;gap:5px}.lab-scene .orbit-controls{bottom:152px}.lab-readout{top:120px;left:28px}.lab-decoration{top:125px}.lab-top h2{font-size:20px}.lab-macros strong{font-size:26px}}
+
+/* Full-viewport reactor. Readouts float in front of one continuous 3D world. */
+:root{background:#070b09}
+body{background:radial-gradient(ellipse at 50% 40%,#132318 0%,#070b09 70%)}
+.app-shell{isolation:isolate;max-width:1640px;padding:0 44px}
+.world-background{position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden}
+.world-background .three-stage{inset:0;mask-image:none;transition:opacity 1.2s}
+.world-background .orbit-canvas{width:100%;height:100%;cursor:default}
+.world-background .orbit-fallback{width:min(110vh,125vw);height:min(110vh,125vw);opacity:.65}
+.world-background .orbit-fallback-note{position:fixed;bottom:16px;right:20px}
+.world-shade{position:fixed;inset:0;z-index:-2;pointer-events:none;background:linear-gradient(180deg,#050907ad 0%,transparent 24%,transparent 67%,#05090778 100%),linear-gradient(90deg,#05090780,transparent 38%,transparent 68%,#05090760)}
+.topbar{height:88px;border-color:#abc79b20}
+.page-heading{padding:30px 0 20px;text-shadow:0 3px 24px #000}
+.page-heading h1{font-size:clamp(29px,3.1vw,44px);font-weight:500;letter-spacing:-1.4px}
+.outline-button,.day-chip{background:#0a120b70;backdrop-filter:blur(12px)}
+.workspace{grid-template-columns:minmax(0,1fr) 330px;gap:26px}
+.overview{gap:20px}
+.orbit-panel{height:420px;flex:1;min-height:350px;background:none;border:0;border-radius:0;overflow:visible;isolation:auto}
+.orbit-panel:after{display:none}
+.orbit-panel>.panel-top{padding:17px 0 0;align-items:flex-start}
+.orbit-panel .micro-title{font-size:10px;letter-spacing:2px;color:#97b58f}
+.status-pill{background:#0d180cb3;backdrop-filter:blur(12px);color:#d0e9b3;border-color:#aedb7438;font-size:11px;max-width:180px}
+.orbit-space{inset:20px 0 45px;pointer-events:none}
+.energy-center{left:0;top:64px;filter:drop-shadow(0 3px 14px #000);padding:0 12px 22px 0}
+.energy-number{font-size:clamp(84px,8vw,128px);font-weight:500;line-height:.95;margin:13px 0 12px;letter-spacing:-3px}
+.energy-caption{font-size:13px;color:#d0dfc4}
+.energy-baseline{font-size:12px!important;color:#b8caaa;border-color:#a9cb7c35;margin-top:17px}
+.energy-unit{color:#c1d2b7}
+.reactor-label{right:8px;top:72px;text-shadow:0 2px 8px #000}
+.reactor-label>span:first-child{font-size:16px;color:#cee8ab;letter-spacing:3px}
+.reactor-label>span:last-child{color:#9fbb86;font-size:11px}
+.coordinate-right{right:8px;color:#9ab789;opacity:.7}
+.field-caption{position:absolute;right:8px;bottom:12px;text-align:right;color:#c5d8b7;text-shadow:0 3px 20px #000}
+.field-caption>span{font-size:9px;letter-spacing:2.6px;color:#8faa7a}
+.field-caption strong{display:block;font-size:20px;line-height:1.6;font-weight:400;letter-spacing:2px;margin-top:10px}
+.orbit-bottom{left:0;right:0;bottom:4px;max-width:none;font-size:11px;align-items:center;line-height:1.4;color:#a7bd97}
+.orbit-bottom>span:first-child{padding:8px 0;font-size:11px}
+.field-controls{display:flex;gap:6px;pointer-events:auto}
+.field-controls button{display:flex;align-items:center;gap:7px;background:#0b170dcc;border:1px solid #9dcc6945;backdrop-filter:blur(12px);padding:10px 12px;border-radius:9px;font-size:12px;color:#d0e9b7}
+.field-controls button:hover{background:#354d21;border-color:#cefc68}
+.macro-card{background:linear-gradient(135deg,#1020169e,#08100ab3);backdrop-filter:blur(17px);border-color:#bcdea330;padding:20px 17px;border-radius:13px;box-shadow:0 15px 50px #0002}
+.macro-heading{font-size:13px;flex-wrap:nowrap;gap:6px}
+.macro-percent{width:auto;margin:0 0 0 auto;font-size:13px}
+.macro-numbers strong{font-size:47px}
+.macro-numbers>span{color:#a8b89b}
+.macro-bottom{font-size:12px;color:#bccbb2}
+.segmented-progress i{background:#adcc8b25}
+.entry-panel{display:block;align-self:start;padding:23px;background:linear-gradient(145deg,#152419c7,#09120edb);backdrop-filter:blur(22px);border-color:#bcdea336;box-shadow:0 20px 80px #0003;border-radius:17px}
+.entry-panel h2{font-size:27px;margin:20px 0 22px}
+.entry-note{max-width:none;justify-content:center;color:#a0b48c;font-size:11px!important}
+.entry-count{color:#9aae86}
+.field-label>span{color:#92a57f}
+.add-button{box-shadow:0 0 40px #b9ff5528;background:linear-gradient(110deg,#dcff86,#baf14e);height:56px;font-size:14px}
+.food-journal{margin-top:38px}
+.journal-header{text-shadow:0 3px 16px #000}
+.journal-header .micro-title,.journal-date{color:#a2b68f}
+.empty-journal,.journal-table-wrap{background:#0a130db8;backdrop-filter:blur(20px);border-color:#b4d19a2d}
+.journal-table tbody tr{background:#0b140ca3}
+.journal-table th{background:#172719a8}
+footer{border-color:#abc79b25;color:#9aaf8b;text-shadow:0 2px 12px #000}
+.injection-flare{position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;background:radial-gradient(ellipse at 50% 50%,#eaffb89c 0%,#baff5828 33%,transparent 73%);mix-blend-mode:screen;animation:energy-impact 3.2s ease-out both}
+@keyframes energy-impact{0%,34%{opacity:0;transform:scale(.85)}43%{opacity:.72;transform:scale(1)}58%{opacity:.16}100%{opacity:0;transform:scale(1.35)}}
+@media(min-width:1450px){.workspace{grid-template-columns:minmax(0,1fr) 365px;gap:32px}.entry-panel{padding:27px}.orbit-panel{min-height:395px}.energy-center{left:0;top:75px}.macro-card{padding:22px}.field-caption strong{font-size:24px}}
+@media(min-width:761px) and (max-width:1100px){.app-shell{padding:0 28px}.workspace{grid-template-columns:minmax(0,1fr) 290px;gap:20px}.entry-panel{padding:20px}.entry-panel h2{font-size:25px;margin:16px 0 19px}.orbit-panel{min-height:355px}.energy-center{top:65px}.energy-number{font-size:87px}.reactor-label{top:58px}.reactor-label>span:first-child{font-size:12px;letter-spacing:2px}.reactor-label>span:last-child{display:none}.macro-card{padding:15px 11px}.macro-heading{flex-wrap:wrap;font-size:12px}.macro-percent{width:100%;margin:3px 0 0}.macro-numbers{gap:4px}.macro-numbers strong{font-size:39px}.macro-numbers>span{font-size:12px}.macro-bottom{font-size:11px}.field-controls button{padding:9px;font-size:11px}.orbit-bottom>span:first-child{max-width:110px;font-size:10px}.field-caption strong{font-size:18px}.field-caption{bottom:18px}}
+@media(max-width:760px){.app-shell{padding:0 20px}.topbar{height:78px}.workspace{grid-template-columns:1fr;gap:22px}.page-heading{padding:27px 0 17px}.orbit-panel{height:410px;min-height:410px;flex:auto}.orbit-panel>.panel-top{padding-top:15px}.energy-center{top:65px}.energy-number{font-size:86px}.reactor-label{top:68px}.field-caption{bottom:25px}.field-caption strong{font-size:18px}.field-caption>span{font-size:8px}.orbit-bottom{bottom:0;left:0;right:0;font-size:10px}.orbit-bottom>span:first-child{font-size:10px;max-width:none}.field-controls button{font-size:11px;padding:9px}.macro-grid{gap:8px}.macro-card{padding:14px 10px}.macro-heading{font-size:12px;flex-wrap:wrap}.macro-percent{width:100%;margin:3px 0 0}.macro-numbers{gap:4px}.macro-numbers strong{font-size:36px}.macro-numbers>span{font-size:12px}.macro-bottom{font-size:11px}.entry-panel{padding:23px}.entry-panel h2{font-size:27px;margin:20px 0}.entry-panel h2 br{display:none}.entry-note{justify-content:center}.world-shade{background:linear-gradient(180deg,#050907ad,transparent 30%,transparent 70%,#05090780),linear-gradient(90deg,#05090770,transparent 60%)}.food-journal{margin-top:28px}}
+@media(max-width:390px){.app-shell{padding:0 14px}.orbit-panel{height:385px;min-height:385px}.energy-number{font-size:73px}.reactor-label>span:first-child{font-size:11px}.macro-numbers strong{font-size:31px}.macro-numbers>span{font-size:11px}.macro-heading{font-size:11px}.field-caption strong{font-size:17px}.field-controls button{padding:8px}.orbit-bottom>span:first-child{font-size:9px}.add-button{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.injection-flare{display:none}}
