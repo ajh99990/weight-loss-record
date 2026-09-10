@@ -2,12 +2,17 @@
 import {ref,computed,onMounted,onBeforeUnmount,nextTick,watch} from 'vue';
 import {ArrowUpRight,ArrowRight,Plus,Minus,Check,Trash2,Flame,ChevronDown,ScanLine,Leaf,Milk,Wheat,Beef,Nut,IceCreamBowl,Zap,RotateCcw,MoveUpRight,VolumeX,Pause,Play,Expand,X,SlidersHorizontal} from 'lucide-vue-next';
 import OrbitScene from './OrbitScene.vue';
+import GraphicsQuality from './GraphicsQuality.vue';
+import {GRAPHICS_KEY,readGraphicsPreference} from './graphics-quality';
 import AnimatedNumber from './AnimatedNumber.vue';
 import GoalSettings from './GoalSettings.vue';
 import {GOAL_SETTINGS_KEY,defaultGoalSettings,readGoalSettings,macrosWithGoals} from './goals';
 import {registerNutritionTools} from './webmcp';
 import {FOOD_LIBRARY_KEY,foodCatalog,readFoodLibrary,saveCustomFood} from './food-library';
 import {FOODS,dayKey,nutrients,totals,calories,readSaved,macroStatus,validateEntry,createRecordId} from './nutrition';
+const graphicsPreference=ref('auto'),graphicsTier=ref('balanced');
+function readGraphics(){try{graphicsPreference.value=readGraphicsPreference(localStorage.getItem(GRAPHICS_KEY));}catch{graphicsPreference.value='auto';}}
+function changeGraphics(value){graphicsPreference.value=value;try{localStorage.setItem(GRAPHICS_KEY,value);}catch{notify('画质已切换，本次设置暂未保存');}}
 const goalSettings=ref(defaultGoalSettings()),goalsDialog=ref(null),goalsIssue=ref('');
 const macros=computed(()=>macrosWithGoals(goalSettings.value.goals));
 function readGoals(){try{goalSettings.value=readGoalSettings(localStorage.getItem(GOAL_SETTINGS_KEY));goalsIssue.value='';}catch(e){goalsIssue.value=e.message;}}
@@ -52,14 +57,14 @@ function recordFood(name,weight){rollover();const item=validateEntry(name,weight
 function addFood(){try{recordFood(selected.value,grams.value)}catch(e){error.value=e.message}}
 function removeFood(id){rollover();const i=log.value.findIndex(x=>x.id===id);if(i<0)return;const name=foods.value[log.value[i].name].label;log.value.splice(i,1);persist();notify(`已移除 ${name}`)}
 function changeWeight(delta){grams.value=Math.max(1,Math.min(10000,(Number(grams.value)||0)+delta));error.value=''}
-function onStorage(e){if(e.key===GOAL_SETTINGS_KEY||e.key===null)readGoals();if(e.key==='food-tracker'||e.key===FOOD_LIBRARY_KEY||e.key===null){date.value=dayKey();read()}}
-onMounted(()=>{readGoals();read();unregisterTools=registerNutritionTools({read:()=>({date:date.value,goals:goalSettings.value.goals,totals:eaten.value,log:log.value,foods:foods.value}),add:recordFood,remove:removeFood,afterUpdate:nextTick});window.addEventListener('storage',onStorage);midnightTimer=setInterval(rollover,30000);window.addEventListener('focus',rollover)});
+function onStorage(e){if(e.key===GRAPHICS_KEY||e.key===null)readGraphics();if(e.key===GOAL_SETTINGS_KEY||e.key===null)readGoals();if(e.key==='food-tracker'||e.key===FOOD_LIBRARY_KEY||e.key===null){date.value=dayKey();read()}}
+onMounted(()=>{readGraphics();readGoals();read();unregisterTools=registerNutritionTools({read:()=>({date:date.value,goals:goalSettings.value.goals,totals:eaten.value,log:log.value,foods:foods.value}),add:recordFood,remove:removeFood,afterUpdate:nextTick});window.addEventListener('storage',onStorage);midnightTimer=setInterval(rollover,30000);window.addEventListener('focus',rollover)});
 onBeforeUnmount(()=>{if(foodDialog.value?.open)document.body.style.overflow=foodDialogOverflow??'';if(immersive.value)document.body.style.overflow=previousOverflow??'';unregisterTools?.();window.removeEventListener('storage',onStorage);clearInterval(midnightTimer);clearTimeout(notifyTimer);window.removeEventListener('focus',rollover)});
 </script>
 
 <template>
-  <div class="app-shell">
-    <div class="world-background" aria-hidden="true"><OrbitScene ref="backgroundScene" background :progress="macros.map(m=>eaten[m.key]/m.goal)" :active="activeMacro" :injection="injection" :suspended="immersive" @motion="motionPaused=$event"/></div>
+  <div class="app-shell" :class="`graphics-${graphicsTier}`">
+    <div class="world-background" aria-hidden="true"><OrbitScene ref="backgroundScene" :quality="graphicsPreference" @quality="graphicsTier=$event" background :progress="macros.map(m=>eaten[m.key]/m.goal)" :active="activeMacro" :injection="injection" :suspended="immersive" @motion="motionPaused=$event"/></div>
     <div class="world-shade" aria-hidden="true"></div>
     <div v-if="injection && !motionPaused && !immersive" :key="injection.id" class="injection-flare" aria-hidden="true"></div>
     <header class="topbar">
@@ -77,7 +82,7 @@ onBeforeUnmount(()=>{if(foodDialog.value?.open)document.body.style.overflow=food
               <div class="energy-center"><span class="energy-caption"><Flame :size="15"/> 今日摄入</span><div class="energy-number"><AnimatedNumber :value="energy" :decimals="0"/></div><span class="energy-unit">KCAL</span><div class="energy-baseline">目标约 {{targetEnergy.toLocaleString('en-US')}} kcal</div></div>
               <span class="reactor-label"><span>FUEL CORE / 02</span><span>营养反应堆 <ArrowUpRight :size="12"/></span></span><span class="orbit-coordinate coordinate-left">P / C / F</span><span class="orbit-coordinate coordinate-right">DAILY INTAKE</span>
             </div>
-            <div class="orbit-bottom"><span><i></i> 轨道填充 = 目标完成度</span><div class="field-controls"><button @click="backgroundScene?.toggleMotion()" :aria-label="motionPaused?'播放背景动画':'暂停背景动画'"><Play v-if="motionPaused" :size="15"/><Pause v-else :size="15"/></button><button @click="openLab"><Expand :size="15"/> 探索核心</button></div></div>
+            <div class="orbit-bottom"><span><i></i> 轨道填充 = 目标完成度</span><div class="field-controls"><GraphicsQuality :model-value="graphicsPreference" :tier="graphicsTier" @update:model-value="changeGraphics"/><button @click="backgroundScene?.toggleMotion()" :aria-label="motionPaused?'播放背景动画':'暂停背景动画'"><Play v-if="motionPaused" :size="15"/><Pause v-else :size="15"/></button><button @click="openLab"><Expand :size="15"/> 探索核心</button></div></div>
           </div>
           <div class="macro-grid">
             <article v-for="(macro,i) in macros" :key="macro.key" class="macro-card" :class="{highlighted:activeMacro===i}" tabindex="0" @mouseenter="activeMacro=i" @mouseleave="activeMacro=-1" @focus="activeMacro=i" @blur="activeMacro=-1" :style="{'--macro':macro.color}">
@@ -134,8 +139,8 @@ onBeforeUnmount(()=>{if(foodDialog.value?.open)document.body.style.overflow=food
     </dialog>
 
     <dialog v-if="immersive" ref="labDialog" class="energy-lab" @close="closeLab" aria-labelledby="lab-title">
-      <div class="lab-top"><div><span class="eyebrow">FUEL / IMMERSIVE EXPERIENCE</span><h2 id="lab-title">你的能量，正在发生。</h2></div><button class="lab-close" @click="labDialog.close()"><span>返回记录</span><X :size="20"/></button></div>
-      <div class="lab-scene"><OrbitScene :immersive="true" :progress="macros.map(m=>eaten[m.key]/m.goal)" :active="activeMacro" :revision="revision" @select="activeMacro=$event"/></div>
+      <div class="lab-top"><div><span class="eyebrow">FUEL / IMMERSIVE EXPERIENCE</span><h2 id="lab-title">你的能量，正在发生。</h2></div><div class="lab-top-actions"><GraphicsQuality :model-value="graphicsPreference" :tier="graphicsTier" @update:model-value="changeGraphics"/><button class="lab-close" @click="labDialog.close()"><span>返回记录</span><X :size="20"/></button></div></div>
+      <div class="lab-scene"><OrbitScene :quality="graphicsPreference" @quality="graphicsTier=$event" :immersive="true" :progress="macros.map(m=>eaten[m.key]/m.goal)" :active="activeMacro" :revision="revision" @select="activeMacro=$event"/></div>
       <div class="lab-readout"><span>今日摄入</span><strong>{{energy.toLocaleString('en-US')}}<small> kcal</small></strong><span>目标约 {{targetEnergy.toLocaleString('en-US')}} kcal</span></div>
       <div class="lab-decoration" aria-hidden="true">NUTRIENT<br/>REACTOR<span>V.01 / PERSONAL ENERGY SYSTEM</span></div>
       <div class="lab-macros"><button v-for="(m,i) in macros" :key="m.key" :style="{'--macro':m.color}" @click="activeMacro=activeMacro===i?-1:i" :aria-pressed="activeMacro===i"><span><i></i>{{m.name}}</span><strong>{{format(eaten[m.key])}}<small> / {{m.goal}} g</small></strong><span class="lab-meter"><i :style="{width:Math.min(100,eaten[m.key]/m.goal*100)+'%'}"></i></span><span>{{macroStatus(eaten[m.key],m.goal)}}</span></button></div>

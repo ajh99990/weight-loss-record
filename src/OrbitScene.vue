@@ -1,8 +1,8 @@
 <script setup>
 import {ref,watch,onMounted,onBeforeUnmount} from 'vue';
 import {Pause,Play,RotateCcw,Expand,Plus,Minus,Sparkles,Layers} from 'lucide-vue-next';
-const props=defineProps({progress:{type:Array,default:()=>[0,0,0]},active:{type:Number,default:-1},revision:{type:Number,default:0},immersive:{type:Boolean,default:false},suspended:{type:Boolean,default:false},background:{type:Boolean,default:false},injection:{type:Object,default:null}});
-const emit=defineEmits(['select','expand','motion']);
+const props=defineProps({progress:{type:Array,default:()=>[0,0,0]},active:{type:Number,default:-1},revision:{type:Number,default:0},immersive:{type:Boolean,default:false},suspended:{type:Boolean,default:false},background:{type:Boolean,default:false},injection:{type:Object,default:null},quality:{type:String,default:'auto'}});
+const emit=defineEmits(['select','expand','motion','quality']);
 const host=ref(null),ready=ref(false),failed=ref(false),paused=ref(false),exploded=ref(false),modelError=ref(false);
 let scene,disposed=false,media;
 function setMotion(){scene?.setPaused(paused.value);emit('motion',paused.value)}
@@ -11,8 +11,9 @@ function onPreference(e){paused.value=e.matches;setMotion()}
 function fallback(){ready.value=false;failed.value=true}
 onMounted(async()=>{
   media=matchMedia('(prefers-reduced-motion: reduce)');paused.value=media.matches;media.addEventListener('change',onPreference);emit('motion',paused.value);
-  try {const {createOrbit}=await import('./orbit');if(disposed)return;scene=createOrbit(host.value,{reduced:paused.value,immersive:props.immersive,background:props.background,onModelFailure:()=>modelError.value=true,onSelect:index=>emit('select',index),onFailure:fallback});scene.setProgress(props.progress);scene.setActive(props.active);scene.setSuspended(props.suspended);if(props.injection)scene.pulse(props.injection.origin);ready.value=true;}catch{fallback()}
+  try {const {createOrbit}=await import('./orbit');if(disposed)return;scene=createOrbit(host.value,{reduced:paused.value,immersive:props.immersive,background:props.background,quality:props.quality,onQuality:tier=>emit('quality',tier),onModelFailure:()=>modelError.value=true,onSelect:index=>emit('select',index),onFailure:fallback});scene.setProgress(props.progress);scene.setActive(props.active);scene.setSuspended(props.suspended);if(props.injection)scene.pulse(props.injection.origin);ready.value=true;}catch{fallback()}
 });
+watch(()=>props.quality,value=>scene?.setQuality(value));
 watch(()=>props.progress,v=>scene?.setProgress(v),{deep:true});
 watch(()=>props.active,v=>scene?.setActive(v));
 watch(()=>props.revision,()=>scene?.pulse());
