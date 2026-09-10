@@ -26,32 +26,32 @@ export const FOODS = {
 export function dayKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
-export function validateEntry(name, grams) {
-  if (!Object.hasOwn(FOODS,name)) throw new Error('请选择食物');
+export function validateEntry(name, grams, foods = FOODS) {
+  if (!Object.hasOwn(foods,name)) throw new Error('请选择食物');
   if(typeof grams!=='number'&&typeof grams!=='string') throw new Error('请输入有效的克数');
   const weight = Number(grams);
   if (!Number.isFinite(weight) || weight <= 0 || weight > 10000) throw new Error('请输入 0 到 10,000 之间的克数');
   return {name,grams:weight};
 }
-export function nutrients(name, grams) {
-  const entry = validateEntry(name,grams);
-  return Object.fromEntries(MACROS.map(({key})=>[key,FOODS[name][key]*entry.grams/100]));
+export function nutrients(name, grams, foods = FOODS) {
+  const entry = validateEntry(name,grams,foods);
+  return Object.fromEntries(MACROS.map(({key})=>[key,foods[name][key]*entry.grams/100]));
 }
-export function totals(log) {
+export function totals(log, foods = FOODS) {
   return log.reduce((sum,item)=>{
-    const values = nutrients(item.name,item.grams);
+    const values = nutrients(item.name,item.grams,foods);
     for(const {key} of MACROS) sum[key]+=values[key];
     return sum;
   },{protein:0,carb:0,fat:0});
 }
 export const calories = (n) => n.protein*4 + n.carb*4 + n.fat*9;
-export function readSaved(raw,date=dayKey()) {
+export function readSaved(raw,date=dayKey(),foods=FOODS) {
   if(!raw) return {log:[],issue:null};
   try {
     const parsed = JSON.parse(raw);
     if(parsed.date !== date) return {log:[],issue:null};
     if(!Array.isArray(parsed.log)) throw new Error('Invalid log');
-    const log=parsed.log.map((item,index)=>({...validateEntry(item.name,item.grams),id:typeof item.id==='string'?item.id:`restored-${index}`,time:typeof item.time==='string'?item.time:''}));
+    const log=parsed.log.map((item,index)=>({...validateEntry(item.name,item.grams,foods),id:typeof item.id==='string'?item.id:`restored-${index}`,time:typeof item.time==='string'?item.time:''}));
     return {log,issue:null};
   } catch { return {log:[],issue:'保存的记录无法读取。原始数据已保留。'}; }
 }
